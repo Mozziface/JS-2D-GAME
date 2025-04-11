@@ -4,26 +4,19 @@ const ctx = canvas.getContext('2d');
 canvas.width = 800;
 canvas.height = 600;
 
-// Ground class (unchanged)
-class Ground {
-    constructor() {
-        this.x = 0;
-        this.y = canvas.height - 20;
-        this.width = canvas.width;
-        this.height = 20;
-    }
+// object to store all sprite images
+const sprites = {
+    player: new Image(),
+    platform: new Image(),
+    background: new Image()
+};
 
-    draw(ctx) {
-        ctx.fillStyle = 'green';
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-    }
-}
+// set the source image of the sprite
+sprites.player.src = '../assets/player.png';
+sprites.platform.src = '../assets/platform.png';
+sprites.background.src = '../assets/Reference.png'; // Set background image
 
-const ground = new Ground();
-
-// Create the player using the Player class from player.js
-const player = new Player(100, ground.y - 40, 40, 40);
-
+// Remove the Ground class and directly handle platforms
 let platforms = [];
 let collectibles = [];
 
@@ -45,9 +38,21 @@ document.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowUp') keys.up = false;
 });
 
+// Add a click event listener to play audio once
+document.addEventListener('click', () => {
+    const audio = document.getElementById('audio-element'); // Replace with your audio element ID
+    if (audio) {
+        audio.play().catch(err => console.error('Audio playback failed:', err));
+    }
+}, { once: true }); // Ensures the event listener is triggered only once
+
+// Ensure the player is initialized
+const player = new Player(100, canvas.height - 60, 40, 40); // Adjust parameters as needed
+
+// Modify the generatePlatform function to draw platforms directly
 function generatePlatform() {
     let lastPlatform = platforms[platforms.length - 1] || { x: 200, y: canvas.height - 100, width: 200 };
-    
+
     let newX = lastPlatform.x + Math.random() * 200 + 100;
     let newY;
 
@@ -63,49 +68,37 @@ function generatePlatform() {
     }
 }
 
-for (let i = 0; i < 5; i++) {
-    generatePlatform();
-}
-
-// object to store all sprite images
-const sprites = {
-    player: new Image(),
-    platform: new Image(),
-    // ground: new Image(),
-    background: new Image()
-}
-
-// set the source image of the sprite
-sprites.player.src = '../assets/player.png';
-sprites.platform.src = '../assets/platform.png';
-// sprites.ground.src = '..assets/ground.png';
-sprites.background.src = '../assets/Reference.png';
-
 // variable to track the number of images loaded
 let imagesLoaded = 0;
-const totalImages =  Object.keys(sprites).length;
+const totalImages = Object.keys(sprites).length;
 
 // function to handle image loading
-function onImageLoad(){
+function onImageLoad() {
     imagesLoaded++;
-    //start the gameloop only when all images are loaded
-    if(imagesLoaded === totalImages){
+    // start the game loop only when all images are loaded
+    if (imagesLoaded === totalImages) {
+        // Generate initial platforms only after sprites are loaded
+        for (let i = 0; i < 5; i++) {
+            generatePlatform();
+        }
         gameLoop();
     }
 }
 
 // add load event listeners to each image
-for(let key in sprites){
+for (let key in sprites) {
     sprites[key].addEventListener('load', onImageLoad);
-    sprites[key].addEventListener('error', 
-        () => {
-            console.error(`Failed to load image: ${sprites[key].src}`);
-        }
-    );
+    sprites[key].addEventListener('error', () => {
+        console.error(`Failed to load image: ${sprites[key].src}`);
+    });
 }
 
+// Update the rendering logic in the gameLoop to draw platforms
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw the background image
+    ctx.drawImage(sprites.background, 0, 0, canvas.width, canvas.height);
 
     platforms.forEach(p => p.x -= gameSpeed);
     collectibles.forEach(c => c.x -= gameSpeed);
@@ -117,10 +110,11 @@ function gameLoop() {
         generatePlatform();
     }
 
-    ground.draw(ctx);
-
-    ctx.fillStyle = 'brown';
-    platforms.forEach(p => ctx.fillRect(p.x, p.y, p.width, p.height));
+    // Draw platforms as rectangles
+    platforms.forEach(p => {
+        ctx.fillStyle = '#654321'; // Brown color for platforms
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+    });
 
     collectibles.forEach(c => {
         if (c.checkCollision(player)) {
@@ -129,7 +123,6 @@ function gameLoop() {
         c.draw(ctx);
     });
 
-    // Update the player with the new update method
     player.update(canvas, platforms, keys);
     player.draw(ctx, sprites);
 
@@ -137,5 +130,3 @@ function gameLoop() {
 
     requestAnimationFrame(gameLoop);
 }
-
-// gameLoop();
